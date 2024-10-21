@@ -18,16 +18,25 @@ STATUS_FILE = 'processed_pdfs.txt'
 LINKS_FILE = 'pdf_links.txt'
 
 def load_processed_pdfs():
+    """Returns set of all already processed PDF links, by reading STATUS_FILE
+    """
     if os.path.exists(STATUS_FILE):
         with open(STATUS_FILE, 'r') as f:
             return set(line.strip() for line in f)
     return set()
 
-def save_processed_pdf(pdf_link, status='processed'):
+def save_processed_pdf(pdf_link: str):
+    """Appends STATUS_FILE with the passed in pdf_link
+
+    Args:
+        pdf_link (str): _description_
+    """
     with open(STATUS_FILE, 'a') as f:
         f.write(f"{pdf_link}\n")
 
 def load_pdf_links_from_file():
+    """Returns list of links (as strings) read from LINKS_FILE
+    """
     if os.path.exists(LINKS_FILE):
         with open(LINKS_FILE, 'r') as f:
             return [line.strip() for line in f]

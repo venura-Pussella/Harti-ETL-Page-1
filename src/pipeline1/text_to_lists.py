@@ -7,14 +7,25 @@ def get_patterns():
     return category_pattern, item_pattern
 
 def extract_date(lines):
-    date_line = lines[4]
+    date_line = lines[4] # date is taken from the date displayed right below the Harti banner in the PDF
     print(date_line)
     date_match = re.search(r'\d{4}\.\d{2}\.\d{2}', date_line)
     if date_match:
         return date_match.group(0)
     return None
 
-def parse_text(lines, category_pattern, item_pattern):
+def parse_text(lines: list[str], category_pattern: re.Pattern[str], item_pattern: re.Pattern[str]):
+    """Returns tuple of 5 lists corresponding to dates, categories, items, price range and price average.
+    Dates contains the same date.
+
+    Args:
+        lines (list[str]): _description_
+        category_pattern (re.Pattern[str]): _description_
+        item_pattern (re.Pattern[str]): _description_
+
+    Returns:
+        _type_: _description_
+    """
     dates = []
     categories = []
     items = []
