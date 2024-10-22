@@ -2,6 +2,8 @@
 import asyncio
 import platform
 import os
+import pdfminer
+import pdfminer.pdfparser
 from src import logger
 from src.utils.log_utils import send_log
 from src.connector.blob import upload_to_blob
@@ -23,25 +25,26 @@ container_name = os.getenv('container_name_blob')
 az_blob_conn_str = os.getenv('connect_str')
 
 def download_processed_pdfs():
+    """Downloads processed pdf link tracker from Azure blob and return it as a string 
+    """
     blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
     container_client = blob_service_client.get_container_client(container= container_name) 
     status_file_string = container_client.download_blob(STATUS_FILE, encoding='UTF-8').readall()
     return status_file_string
 
 def upload_processed_pdfs(file_as_string):
+    """Overwrites given string to processed pdf link tracker in Azure blob. 
+    """
     blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
     container_client = blob_service_client.get_container_client(container= container_name) 
     blob_client = container_client.upload_blob(name=STATUS_FILE, data=file_as_string, overwrite=True)
 
 def load_processed_pdfs(status_file_string: str):
-    """Returns set of all already processed PDF links from status_file_string
+    """Expects a string consisting of pdf_link lines, returns it as a set
     """
     mySet = set()
     status_file_lines = status_file_string.rsplit('\n')
     for line in status_file_lines:
-        line = line.strip()
-        line = line.rsplit('.pdf')[0] # to get rid of '%20' characters after the pdf name in the link. eg: 'https://www.harti.gov.lk/images/download/market_information/2015/October/daily_23-10-2015.pdf%20%20%20%20%20%20%20%20%20%20'
-        if line != '': line += '.pdf'
         mySet.add(line)
     return mySet
 
@@ -146,7 +149,10 @@ async def main():
         for pdf_link in pdf_links:
             if pdf_link not in processed_pdfs:
                 logger.info(f"New PDF link: {pdf_link}")
-                await process_pdf(pdf_link)   
+                try:
+                    await process_pdf(pdf_link)   
+                except pdfminer.pdfparser.PDFSyntaxError:
+                    logger.error(f"PDF Syntax Error{pdf_link}")
                 processed_pdfs.add(pdf_link)             
             else:
                 logger.info(f"Skipping already processed PDF link: {pdf_link}")
@@ -154,7 +160,12 @@ async def main():
         logger.info(">>>> Data extraction process completed <<<<")
 
         # update processed pdf tracker file in blob
-        upload_processed_pdfs(processed_pdfs)
+        processed_pdfs_string = ''
+        for link in processed_pdfs:
+            processed_pdfs_string += link
+            processed_pdfs_string += '\n'
+        upload_processed_pdfs(processed_pdfs_string)
+        logger.info(">>>> Processed PDF Tracker uploaded to blob <<<<")
 
     except Exception as e:
         logger.error(f"Error in main execution: {e}")
