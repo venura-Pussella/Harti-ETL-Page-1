@@ -18,7 +18,6 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv()) # read local .env file
 
 STATUS_FILE = 'processed_pdfs.txt'
-LINKS_FILE = 'pdf_links.txt'
 WEB_SOURCE = 'https://www.harti.gov.lk/index.php/en/market-information/data-food-commodities-bulletin'
 container_name = os.getenv('container_name_blob')
 az_blob_conn_str = os.getenv('connect_str')
@@ -26,52 +25,25 @@ az_blob_conn_str = os.getenv('connect_str')
 def download_processed_pdfs():
     blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
     container_client = blob_service_client.get_container_client(container= container_name) 
-    with open(file=STATUS_FILE, mode="wb") as download_file:
-        download_file.write(container_client.download_blob(STATUS_FILE).readall()) # name in blob is also identical to STATUS_FILE
+    status_file_string = container_client.download_blob(STATUS_FILE, encoding='UTF-8').readall()
+    return status_file_string
 
-def upload_processed_pdfs():
+def upload_processed_pdfs(file_as_string):
     blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
     container_client = blob_service_client.get_container_client(container= container_name) 
-    with open(file=STATUS_FILE, mode="rb") as data:
-        blob_client = container_client.upload_blob(name=STATUS_FILE, data=data, overwrite=True) # name in blob is also identical to STATUS_FILE
+    blob_client = container_client.upload_blob(name=STATUS_FILE, data=file_as_string, overwrite=True)
 
-def load_processed_pdfs():
-    """Returns set of all already processed PDF links, by reading STATUS_FILE
+def load_processed_pdfs(status_file_string: str):
+    """Returns set of all already processed PDF links from status_file_string
     """
-    if os.path.exists(STATUS_FILE):
-        mySet = set()
-        with open(STATUS_FILE, 'r') as f:
-            for line in f:
-                line = line.strip()
-                line = line.rsplit('.pdf')[0] # to get rid of '%20' characters after the pdf name in the link. eg: 'https://www.harti.gov.lk/images/download/market_information/2015/October/daily_23-10-2015.pdf%20%20%20%20%20%20%20%20%20%20'
-                if line != '': line += '.pdf'
-                mySet.add(line)
+    mySet = set()
+    status_file_lines = status_file_string.rsplit('\n')
+    for line in status_file_lines:
+        line = line.strip()
+        line = line.rsplit('.pdf')[0] # to get rid of '%20' characters after the pdf name in the link. eg: 'https://www.harti.gov.lk/images/download/market_information/2015/October/daily_23-10-2015.pdf%20%20%20%20%20%20%20%20%20%20'
+        if line != '': line += '.pdf'
+        mySet.add(line)
     return mySet
-
-def save_processed_pdf(pdf_link: str):
-    """Appends STATUS_FILE with the passed in pdf_link
-
-    Args:
-        pdf_link (str): _description_
-    """
-    with open(STATUS_FILE, 'a') as f:
-        f.write(f"{pdf_link}\n")
-
-def load_pdf_links_from_file():
-    """Returns list of links (as strings) read from LINKS_FILE
-    """
-    links = []
-    if os.path.exists(LINKS_FILE):
-        with open(LINKS_FILE, 'r') as f:
-            for line in f:
-                line = line.strip()
-                line = line.rsplit('.pdf')[0] # to get rid of '%20' characters after the pdf name in the link. eg: 'https://www.harti.gov.lk/images/download/market_information/2015/October/daily_23-10-2015.pdf%20%20%20%20%20%20%20%20%20%20'
-                if line != '': line += '.pdf'
-                links.append(line)
-        return links
-    else:
-        logger.error(f"File {LINKS_FILE} not found.")
-        return []
 
 async def process_pdf(pdf_link):
     try:
@@ -131,15 +103,12 @@ async def process_pdf(pdf_link):
                 )
             logger.info("Sent success log to function monitoring service.")
 
-            save_processed_pdf(pdf_link)
 
         else:
             logger.warning("Metadata line not found. Skipping this PDF.")
-            save_processed_pdf(pdf_link)
 
     except Exception as e:
         logger.error(f"Error processing PDF {pdf_link}: {e}")
-        save_processed_pdf(pdf_link)
 
         # Send error log
         send_log(
@@ -162,31 +131,30 @@ async def main():
     try:
         logger.info(">>>> Starting the data extraction process <<<<")
 
-        # Write all available pdf links on Harti website to LINKS_FILE
-        get_all_pdf_links(WEB_SOURCE, LINKS_FILE) 
+        # Get list of all available pdf links from Harti website
+        pdf_links = get_all_pdf_links(WEB_SOURCE) 
 
-        # Load PDF links from file
-        pdf_links = load_pdf_links_from_file()
         if not pdf_links:
             logger.warning("No PDF links found.")
             return
         
         # Load already processed PDFs
-        download_processed_pdfs()
-        processed_pdfs = load_processed_pdfs()
+        status_file_string = download_processed_pdfs()
+        processed_pdfs = load_processed_pdfs(status_file_string)
 
-        # Loop through each PDF link and process it
+        # Loop through each PDF link and process it. After processing, add the link to the set of processed pdf links.
         for pdf_link in pdf_links:
             if pdf_link not in processed_pdfs:
                 logger.info(f"New PDF link: {pdf_link}")
-                await process_pdf(pdf_link)                
+                await process_pdf(pdf_link)   
+                processed_pdfs.add(pdf_link)             
             else:
                 logger.info(f"Skipping already processed PDF link: {pdf_link}")
         
         logger.info(">>>> Data extraction process completed <<<<")
 
         # update processed pdf tracker file in blob
-        upload_processed_pdfs()
+        upload_processed_pdfs(processed_pdfs)
 
     except Exception as e:
         logger.error(f"Error in main execution: {e}")
