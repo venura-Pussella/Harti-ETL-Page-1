@@ -20,3 +20,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("Harti_PDF_Scraper_Page_1_ETL")
+
+# set azure logger to warnings only
+logger2 = logging.getLogger('azure')
+logger2.setLevel(logging.WARNING)
