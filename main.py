@@ -16,15 +16,13 @@ from src.pipeline1.text_to_lists import parse_text, get_patterns
 from src.pipeline1.metadata_reader import find_line_with_metadata
 from src.pipeline1.data_format_converter import dataframe_to_csv_string, convert_dataframe_to_cosmos_format
 from src.pipeline1.text_extractor_all import download_pdf_as_bytes, extract_text_from_first_page, get_all_pdf_links
-from azure.storage.blob import BlobServiceClient
+# from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv()) # read local .env file
 from src.configuration.configuration import WEB_SOURCE
 
 container_name = os.getenv('container_name_blob')
 az_blob_conn_str = os.getenv('connect_str')
-
-
 
 def load_processed_pdfs(status_file_string: str):
     """Expects a string consisting of pdf_link lines, returns it as a set

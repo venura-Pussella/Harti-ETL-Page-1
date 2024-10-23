@@ -32,12 +32,12 @@
 
 import azure.functions as func
 import logging
-from main_manual import run_main
+from main import run_main
 
 app = func.FunctionApp()
 
 # @app.schedule(schedule="0 */10 * * * *", arg_name="myTimer", run_on_startup=True, use_monitor=False) 
-@app.schedule(schedule="0 0 16 * * *", arg_name="myTimer", run_on_startup=True, use_monitor=False) 
+@app.schedule(schedule="0 30 10 * * *", arg_name="myTimer", run_on_startup=True, use_monitor=False) 
 def harti_etl_page1(myTimer: func.TimerRequest) -> None:
     if myTimer.past_due:
         logging.info('The timer is past due!')
