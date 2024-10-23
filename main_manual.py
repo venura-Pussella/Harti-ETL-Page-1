@@ -7,7 +7,7 @@ import pdfminer.pdfparser
 import logging # for use in Azure functions environment (replace all calls to logger object with python logging class)
 # from src.loggersetup import logger # only for local testing
 from src.utils.log_utils import send_log
-from src.connector.blob import upload_to_blob
+from src.connector.blob import upload_to_blob, upload_processed_pdfs, download_processed_pdfs
 from src.connector.cosmos_db import write_harti_data_to_cosmosdb
 from src.configuration.configuration import metadata_line1
 from src.pipeline1.lists_to_dataframe import create_dataframe
@@ -19,26 +19,12 @@ from src.pipeline1.text_extractor_all import download_pdf_as_bytes, extract_text
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv()) # read local .env file
+from src.configuration.configuration import WEB_SOURCE
 
-STATUS_FILE = 'processed_pdfs.txt'
-WEB_SOURCE = 'https://www.harti.gov.lk/index.php/en/market-information/data-food-commodities-bulletin'
 container_name = os.getenv('container_name_blob')
 az_blob_conn_str = os.getenv('connect_str')
 
-def download_processed_pdfs():
-    """Downloads processed pdf link tracker from Azure blob and return it as a string 
-    """
-    blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
-    container_client = blob_service_client.get_container_client(container= container_name) 
-    status_file_string = container_client.download_blob(STATUS_FILE, encoding='UTF-8').readall()
-    return status_file_string
 
-def upload_processed_pdfs(file_as_string):
-    """Overwrites given string to processed pdf link tracker in Azure blob. 
-    """
-    blob_service_client = BlobServiceClient.from_connection_string(az_blob_conn_str)
-    container_client = blob_service_client.get_container_client(container= container_name) 
-    blob_client = container_client.upload_blob(name=STATUS_FILE, data=file_as_string, overwrite=True)
 
 def load_processed_pdfs(status_file_string: str):
     """Expects a string consisting of pdf_link lines, returns it as a set
@@ -46,6 +32,7 @@ def load_processed_pdfs(status_file_string: str):
     mySet = set()
     status_file_lines = status_file_string.rsplit('\n')
     for line in status_file_lines:
+        line = line.strip()
         mySet.add(line)
     return mySet
 
@@ -93,14 +80,14 @@ async def process_pdf(pdf_link):
 
             # Send success log
             send_log(
-                service_type="Container Application - Manual Run",
+                service_type="Azure Functions",
                 application_name="Harti Food Price Collector Page 1",
                 project_name="Harti Food Price Prediction",
                 project_sub_name="Food Price History",
-                azure_hosting_name="ML Services",
+                azure_hosting_name="AI Services",
                 developmental_language="Python",
-                description="Sri Lanka Food Prices - Manual Run Containerized Application",
-                created_by="BrownsAIseviceTest",
+                description="Sri Lanka Food Prices - Azure Functions",
+                created_by="BrownsAIsevice",
                 log_print="Successfully completed data ingestion to Cosmos DB.",
                 running_within_minutes=1440,
                 error_id=0
@@ -116,14 +103,14 @@ async def process_pdf(pdf_link):
 
         # Send error log
         send_log(
-            service_type="Container Application - Manual Run",
+            service_type="Azure Functions",
             application_name="Harti Food Price Collector Page 1",
             project_name="Harti Food Price Prediction",
             project_sub_name="Food Price History",
-            azure_hosting_name="ML Services",
+            azure_hosting_name="AI Services",
             developmental_language="Python",
-            description="Sri Lanka Food Prices - Manual Run Containerized Application",
-            created_by="BrownsAIseviceTest",
+            description="Sri Lanka Food Prices - Azure Functions",
+            created_by="BrownsAIsevice",
             log_print="An error occurred: " + str(e),
             running_within_minutes=1440,
             error_id=1,
@@ -178,3 +165,4 @@ def run_main():
     asyncio.run(main())
 
 
+# run_main() # only for local testing

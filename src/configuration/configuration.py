@@ -7,6 +7,8 @@ pdf_output_directory = os.path.join('data', 'pdf')
 
 # CSV data saving path
 CSV_DIR = os.path.join('data', 'csv')
+STATUS_FILE = 'processed_pdfs.txt'
+WEB_SOURCE = 'https://www.harti.gov.lk/index.php/en/market-information/data-food-commodities-bulletin'
 
 # Proxy server 
 
