@@ -4,7 +4,8 @@ import platform
 import os
 import pdfminer
 import pdfminer.pdfparser
-from src import logger
+import logging # for use in Azure functions environment (replace all calls to logger object with python logging class)
+# from src.loggersetup import logger # only for local testing
 from src.utils.log_utils import send_log
 from src.connector.blob import upload_to_blob
 from src.connector.cosmos_db import write_harti_data_to_cosmosdb
@@ -50,7 +51,7 @@ def load_processed_pdfs(status_file_string: str):
 
 async def process_pdf(pdf_link):
     try:
-        logger.info(f"Processing PDF link: {pdf_link}")
+        logging.info(f"Processing PDF link: {pdf_link}")
         pdf_bytes = download_pdf_as_bytes(pdf_link)
         extracted_text = extract_text_from_first_page(pdf_bytes)
 
@@ -60,7 +61,7 @@ async def process_pdf(pdf_link):
         # Check if metadata line exists
         if find_line_with_metadata(extracted_lines, metadata_line1):
             
-            logger.info(">>>> Metadata line found. Proceeding with data processing... <<<<")
+            logging.info(">>>> Metadata line found. Proceeding with data processing... <<<<")
             
             # Get patterns
             category_pattern, item_pattern = get_patterns()
@@ -74,21 +75,21 @@ async def process_pdf(pdf_link):
             # Transform DataFrame
             transformed_dataframe = transform_dataframe(list_to_dataframe)
 
-            logger.info(">>>> Data transformation completed <<<<")
+            logging.info(">>>> Data transformation completed <<<<")
 
             # Convert DataFrame to CSV string
             csv_data, actual_date_str = dataframe_to_csv_string(transformed_dataframe)
 
             # Upload CSV data to blob
             upload_to_blob(csv_data, actual_date_str)
-            logger.info(">>>> CSV data uploaded to blob storage <<<<")
+            logging.info(">>>> CSV data uploaded to blob storage <<<<")
 
             # Convert DataFrame to Cosmos DB format
             cosmos_db_data = convert_dataframe_to_cosmos_format(transformed_dataframe)
 
             # Write Cosmos DB data
             await write_harti_data_to_cosmosdb(cosmos_db_data)
-            logger.info(">>>> Completion of data ingestion to CosmosDB <<<<")
+            logging.info(">>>> Completion of data ingestion to CosmosDB <<<<")
 
             # Send success log
             send_log(
@@ -104,14 +105,14 @@ async def process_pdf(pdf_link):
                 running_within_minutes=1440,
                 error_id=0
                 )
-            logger.info("Sent success log to function monitoring service.")
+            logging.info("Sent success log to function monitoring service.")
 
 
         else:
-            logger.warning("Metadata line not found. Skipping this PDF.")
+            logging.warning("Metadata line not found. Skipping this PDF.")
 
     except Exception as e:
-        logger.error(f"Error processing PDF {pdf_link}: {e}")
+        logging.error(f"Error processing PDF {pdf_link}: {e}")
 
         # Send error log
         send_log(
@@ -127,18 +128,18 @@ async def process_pdf(pdf_link):
             running_within_minutes=1440,
             error_id=1,
             )
-        logger.error("Sent error log to function monitoring service.")
+        logging.error("Sent error log to function monitoring service.")
         raise
 
 async def main():
     try:
-        logger.info(">>>> Starting the data extraction process <<<<")
+        logging.info(">>>> Starting the data extraction process <<<<")
 
         # Get list of all available pdf links from Harti website
         pdf_links = get_all_pdf_links(WEB_SOURCE) 
 
         if not pdf_links:
-            logger.warning("No PDF links found.")
+            logging.warning("No PDF links found.")
             return
         
         # Load already processed PDFs
@@ -148,16 +149,16 @@ async def main():
         # Loop through each PDF link and process it. After processing, add the link to the set of processed pdf links.
         for pdf_link in pdf_links:
             if pdf_link not in processed_pdfs:
-                logger.info(f"New PDF link: {pdf_link}")
+                logging.info(f"New PDF link: {pdf_link}")
                 try:
                     await process_pdf(pdf_link)   
                 except pdfminer.pdfparser.PDFSyntaxError:
-                    logger.error(f"PDF Syntax Error{pdf_link}")
+                    logging.error(f"PDF Syntax Error{pdf_link}")
                 processed_pdfs.add(pdf_link)             
             else:
-                logger.info(f"Skipping already processed PDF link: {pdf_link}")
+                logging.info(f"Skipping already processed PDF link: {pdf_link}")
         
-        logger.info(">>>> Data extraction process completed <<<<")
+        logging.info(">>>> Data extraction process completed <<<<")
 
         # update processed pdf tracker file in blob
         processed_pdfs_string = ''
@@ -165,15 +166,15 @@ async def main():
             processed_pdfs_string += link
             processed_pdfs_string += '\n'
         upload_processed_pdfs(processed_pdfs_string)
-        logger.info(">>>> Processed PDF Tracker uploaded to blob <<<<")
+        logging.info(">>>> Processed PDF Tracker uploaded to blob <<<<")
 
     except Exception as e:
-        logger.error(f"Error in main execution: {e}")
+        logging.error(f"Error in main execution: {e}")
  
 def run_main():
+    logging.info('started run_main()')
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
 
-if __name__ == '__main__':
-    run_main()
+

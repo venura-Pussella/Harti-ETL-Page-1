@@ -1,3 +1,7 @@
+# for local testing only
+# This file should not be imported when deploying to Azure functions (bcuz of makedirs command in the script)
+# When deploying to Az Functions, replaced all calls to logger object with Python logging class.
+
 import os
 import sys
 import logging
