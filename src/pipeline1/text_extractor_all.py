@@ -10,13 +10,14 @@ def get_all_pdf_links(pdf_source):
     soup = BeautifulSoup(response.content, 'html.parser')
     pdf_links = soup.find_all('a', href=True)
     
-    all_pdf_links = []
+    all_pdf_links: list[str] = []
     for link in pdf_links:
         if '.pdf' in link['href']:
             full_link = urljoin(pdf_source, link['href'])
             all_pdf_links.append(full_link)
     
     return all_pdf_links
+            
 
 def download_pdf_as_bytes(pdf_url):
     response = requests.get(pdf_url)
