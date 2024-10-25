@@ -2,9 +2,14 @@
 import re
 
 def get_patterns():
-    category_pattern = re.compile(r'^Rice \(Rs/kg\)|Imported Rice|Dried Chillies \(Rs/Kg\)|Onion \(Rs/Kg\)|Big Onion|Potatoes \(Rs/Kg\)|Pulses \(Rs/Kg\)|Consumption Item\(Rs/Kg\)|Eggs \(Rs/Egg\)')
+    possible_category_patterns = {
+        re.compile(r'^Rice \(Rs/kg\)|Imported Rice|Dried Chillies \(Rs/Kg\)|Onion \(Rs/Kg\)|Big Onion|Potatoes \(Rs/Kg\)|Pulses \(Rs/Kg\)|Consumption Item\(Rs/Kg\)|Eggs \(Rs/Egg\)'),
+        re.compile(r'^Rice \(Rs/50kg\)|Imported Rice|Dried Chillies \(Rs/Kg\)|Onion \(Rs/Kg\)|Big Onion|Potatoes \(Rs/Kg\)|Pulses \(Rs/Kg\)|Consumption Item\(Rs/Kg\)|Eggs \(Rs/Egg\)'),
+        re.compile(r'^Rice \(Rs/50 kg\)|Imported Rice|Dried Chillies \(Rs/Kg\)|Onion \(Rs/Kg\)|Big Onion|Potatoes \(Rs/Kg\)|Pulses \(Rs/Kg\)|Consumption Item\(Rs/Kg\)|Eggs \(Rs/Egg\)')
+    }
     item_pattern = re.compile(r'^([a-zA-Z\s\(\)]*\d*)\s(\d+\.\d{2}\s-\s\d+\.\d{2})\s(\d+\.\d{2})')
-    return category_pattern, item_pattern
+    return possible_category_patterns, item_pattern
+
 
 def extract_date(lines):
     possible_date_patterns = {
@@ -23,17 +28,10 @@ def extract_date(lines):
             if date_match: return date_match.group(0)
     return None
 
-def parse_text(lines: list[str], category_pattern: re.Pattern[str], item_pattern: re.Pattern[str]):
+def parse_text(lines: list[str], possible_category_patterns: set[re.Pattern[str]], item_pattern: re.Pattern[str]):
     """Returns tuple of 5 lists corresponding to dates, categories, items, price range and price average.
     Dates contains the same date.
 
-    Args:
-        lines (list[str]): _description_
-        category_pattern (re.Pattern[str]): _description_
-        item_pattern (re.Pattern[str]): _description_
-
-    Returns:
-        _type_: _description_
     """
     dates = []
     categories = []
@@ -49,10 +47,12 @@ def parse_text(lines: list[str], category_pattern: re.Pattern[str], item_pattern
         if not line:
             continue
         
-        category_match = category_pattern.match(line)
-        if category_match:
-            current_category = category_match.group(0)
-            continue
+        for possible_category_pattern in possible_category_patterns:
+            category_match = possible_category_pattern.match(line)
+            if category_match:
+                current_category = category_match.group(0)
+                continue
+        if category_match: continue
         
         item_match = item_pattern.match(line)
         if item_match:

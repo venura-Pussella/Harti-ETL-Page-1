@@ -50,10 +50,10 @@ async def process_pdf(pdf_link):
             logging.info(">>>> Metadata line found. Proceeding with data processing... <<<<")
             
             # Get patterns
-            category_pattern, item_pattern = get_patterns()
+            possible_category_patterns, item_pattern = get_patterns()
 
             # Parse text to lists
-            dates, categories, items, pettah_price_ranges, pettah_averages = parse_text(extracted_lines, category_pattern, item_pattern)
+            dates, categories, items, pettah_price_ranges, pettah_averages = parse_text(extracted_lines, possible_category_patterns, item_pattern)
 
             # Convert lists to DataFrame
             list_to_dataframe = create_dataframe(dates, categories, items, pettah_price_ranges, pettah_averages)
