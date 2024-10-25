@@ -95,7 +95,7 @@ async def process_pdf(pdf_link):
 
 
         else:
-            logging.warning("Metadata line not found. Skipping this PDF.")
+            logging.warning(f"Metadata line not found. Skipping this PDF: {pdf_link}")
 
     except Exception as e:
         logging.error(f"Error processing PDF {pdf_link}: {e}")
@@ -115,7 +115,7 @@ async def process_pdf(pdf_link):
             error_id=1,
             )
         logging.error("Sent error log to function monitoring service.")
-        raise
+        # raise
 
 async def main():
     try:

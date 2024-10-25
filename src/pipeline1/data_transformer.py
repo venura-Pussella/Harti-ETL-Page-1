@@ -13,8 +13,22 @@ def reorder_columns(df):
     return df
 
 def convert_date_column(df):
+    possible_date_formats = {
+        '%Y.%m.%d', # 2024.02.24
+        '%d.%m.%Y', # 24.02.2024
+        '%Y-%m-%d', # 2024-02-24
+        '%d-%m-%Y', # 24-02-2024
+        '%Y/%m/%d', # 2024/02/24
+        '%d/%m/%Y'  # 24/02/2024
+    }
 
-    df['Date'] = pd.to_datetime(df['Date'], format='%Y.%m.%d')
+    for possible_date_format in possible_date_formats:
+        try: 
+            df['Date'] = pd.to_datetime(df['Date'], format=possible_date_format)
+            break
+        except ValueError:
+            continue
+    
     return df
 
 def split_value_column(df):
