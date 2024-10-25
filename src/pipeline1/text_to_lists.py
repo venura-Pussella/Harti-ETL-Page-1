@@ -8,7 +8,6 @@ def get_patterns():
 
 def extract_date(lines):
     date_line = lines[4] # date is taken from the date displayed right below the Harti banner in the PDF
-    print(date_line)
     date_match = re.search(r'\d{4}\.\d{2}\.\d{2}', date_line)
     if date_match:
         return date_match.group(0)

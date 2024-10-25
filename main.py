@@ -5,9 +5,10 @@ import os
 import pdfminer
 import pdfminer.pdfparser
 import logging # for use in Azure functions environment (replace all calls to logger object with python logging class)
-# from src.loggersetup import logger # only for local testing
+from src import logHandling
+from src.logHandling import log_messages
 from src.utils.log_utils import send_log
-from src.connector.blob import upload_to_blob, upload_processed_pdfs, download_processed_pdfs
+from src.connector.blob import upload_to_blob, upload_processed_pdfs, download_processed_pdfs, update_logs
 from src.connector.cosmos_db import write_harti_data_to_cosmosdb
 from src.configuration.configuration import metadata_line1
 from src.pipeline1.lists_to_dataframe import create_dataframe
@@ -161,6 +162,9 @@ def run_main():
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
+
+    try: update_logs(log_messages)
+    except Exception as e: logging.ERROR(f'Exception when updating logs: {e}')
 
 
 # run_main() # only for local testing
