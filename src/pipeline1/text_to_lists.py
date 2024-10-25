@@ -7,10 +7,20 @@ def get_patterns():
     return category_pattern, item_pattern
 
 def extract_date(lines):
-    date_line = lines[4] # date is taken from the date displayed right below the Harti banner in the PDF
-    date_match = re.search(r'\d{4}\.\d{2}\.\d{2}', date_line)
-    if date_match:
-        return date_match.group(0)
+    possible_date_patterns = {
+        r'\d{4}\.\d{2}\.\d{2}', # 2024.02.24
+        r'\d{2}\.\d{2}\.\d{4}', # 24.02.2024
+        r'\d{4}\-\d{2}\-\d{2}', # 2024-02-24
+        r'\d{2}\-\d{2}\-\d{4}', # 24-02-2024
+        r'\d{4}\/\d{2}\/\d{2}', # 2024/02/24
+        r'\d{2}\/\d{2}\/\d{4}'  # 24/02/2024
+    }
+
+    for i in range(0,7): # date line is usually found at index 4, but there can be some variance
+        date_line = lines[i]
+        for possible_date_pattern in possible_date_patterns:
+            date_match = re.search(possible_date_pattern, date_line)
+            if date_match: return date_match.group(0)
     return None
 
 def parse_text(lines: list[str], category_pattern: re.Pattern[str], item_pattern: re.Pattern[str]):
